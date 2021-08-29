@@ -14,6 +14,7 @@ import imageDataTools
 from imageDataTools import assert_equals
 
 
+
 def get_image_int8rgb_pixels(filename):
     try:
         image = Image.open(filename) #image is now of type PngImageFile, not Image.
@@ -29,15 +30,22 @@ def get_image_int8rgb_pixels(filename):
     return RGBPixels
 
 
-def save_int8rgb_tuples_as_half_hex(data, output_filename=None, mode=None, decoration="{output_filename} = \"{result}\"", **other_kwargs):
+def save_int8rgb_tuples_as_half_hex(
+        data,
+        output_filename=None, mode=None,
+        decoration="{output_filename} = \"{result}\"",
+        **format_kwargs,
+    ):
     #does not save when output_filename is None.
     warnings.warn("save_int8rgb_tuples_as_half_hex is deprecated. Use imageDataTools.int8rgb_pixels_to_hex and/or save_text_to_file instead.")
+    
     if decoration is None:
         decoration = "{result}"
     if output_filename is not None:
         if mode is None:
             raise ValueError("mode not specified")
-    result = imageDataTools.int8rgb_pixels_to_hex(data, chars_per_channel=1, **other_kwargs)
+            
+    result = imageDataTools.int8rgb_pixels_to_hex(data, chars_per_channel=1, **format_kwargs)
     if output_filename is None:
         return result
     else:

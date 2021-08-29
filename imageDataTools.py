@@ -18,6 +18,8 @@ def assert_equals(thing0, thing1):
 
 
 def gen_chunks(input_seq, length):
+    if length < 1:
+        raise ValueError("chunk length must be at least 1.")
     labeling_function = (lambda toLabel: toLabel[0]//length)
     labled_group_gen = itertools.groupby(enumerate(input_seq), labeling_function)
     unlabled_group_gen = (labeledGroup[1] for labeledGroup in labled_group_gen)
@@ -29,7 +31,7 @@ def gen_chunks(input_seq, length):
 
 def int_to_base(value, base):
     if not value >= 0:
-        raise ValueError("negative value: {}.".format(value))
+        raise ValueError("negative value: {}. Value must be positive.".format(value))
     if not base >= 2:
         raise ValueError("invalid base: {}.".format(base))
     result = deque([])
@@ -39,6 +41,7 @@ def int_to_base(value, base):
         value //= base
     if len(result) == 0:
         result.appendleft(0)
+    assert len(result) >= 1
     return list(result)
     
     
@@ -52,12 +55,21 @@ def int_to_base_str(value, base):
     
     
 def int8rgb_color_is_valid(color):
-    return len(color) == 3 and min(color) >= 0 and max(color) < 256
+    return all((
+        len(color) == 3,
+        min(color) >= 0,
+        max(color) < 256,
+        all(isinstance(componentValue, int) for componentValue in color)
+    ))
     
     
 def int8rgb_color_component_to_hex(component, length=2):
-    assert 0 < length <= 2
-    assert 0 <= component < 256
+
+    if not 0 < length <= 2:
+        raise ValueError("invalid length {}.".format(length))
+    if not 0 <= component < 256:
+        raise ValueError("invalid component {}.".format(component))
+    
     result = int_to_base_str(component, 16)
     result = result.rjust(2, ALPHABET[0])
     assert len(result) == 2
@@ -65,23 +77,48 @@ def int8rgb_color_component_to_hex(component, length=2):
     return result
 
 
-def int8rgb_color_to_hex(color, length=2, component_header="", component_delimiter=""):
-    assert 0 < length <= 2
-    assert int8rgb_color_is_valid(color)
-    return component_delimiter.join(component_header + int8rgb_color_component_to_hex(value, length=length) for value in color)
+def int8rgb_color_to_hex(
+        color, length=2,
+        component_header="", component_delimiter="",
+    ):
+
+    if not 0 < length <= 2:
+        raise ValueError("invalid length {}.".format(length))
+    if not int8rgb_color_is_valid(color):
+        raise ValueError("invalid color {}.".format(color))
+        
+    component_text_gen = (component_header + int8rgb_color_component_to_hex(value, length=length) for value in color)
+        
+    return component_delimiter.join(component_text_gen)
     
 
-def int8rgb_pixels_to_hex(pixels, chars_per_channel=2, pixel_header="", pixel_delimiter="", component_header="", component_delimiter=""):
-    pixel_generator = (pixel_header + int8rgb_color_to_hex(color, length=chars_per_channel, component_header=component_header, component_delimiter=component_delimiter) for color in pixels)
-    return pixel_delimiter.join(pixel_generator)
+def int8rgb_pixels_to_hex(
+        pixels, chars_per_channel=2,
+        pixel_header="", pixel_delimiter="",
+        component_header="", component_delimiter="",
+    ):
+
+    pixel_text_gen = (pixel_header + int8rgb_color_to_hex(
+        color,
+        length=chars_per_channel,
+        component_header=component_header, component_delimiter=component_delimiter,
+    ) for color in pixels)
+    
+    return pixel_delimiter.join(pixel_text_gen)
     
 
-def int8rgb_pixel_rows_to_hex(pixels, auto_row_length=None, row_header="", row_delimiter="", **other_kwargs):
+def int8rgb_pixel_rows_to_hex(
+        pixels,
+        auto_row_length=None,
+        row_header="", row_delimiter="",
+        **other_format_kwargs,
+    ):
+    
     if auto_row_length is not None:
         input_row_generator = gen_chunks(pixels, length=auto_row_length)
     else:
         input_row_generator = pixels
-    output_row_generator = (row_header + int8rgb_pixels_to_hex(pixel_row, **other_kwargs) for pixel_row in input_row_generator)
+    output_row_generator = (row_header + int8rgb_pixels_to_hex(pixel_row, **other_format_kwargs) for pixel_row in input_row_generator)
     return row_delimiter.join(output_row_generator)
 
 
@@ -98,8 +135,11 @@ def gen_triplet_tuples_from_int_seq(int_seq):
         
         
 def int_lists_to_triplet_tuple_lists(int_list_seq):
-    raise NotImplementedError()
-
+    result = []
+    for int_list in int_list_seq:
+        tripletTupleList = list(gen_triplet_tuples_from_int_seq(int_list))
+        result.append(tripletTupleList)
+    return result
 
 
 
@@ -117,7 +157,8 @@ def test():
     assert_equals(int8rgb_pixels_to_hex([[14,15,16], [30,31,32]], chars_per_channel=2, pixel_header="#", component_delimiter=","), "#0e,0f,10#1e,1f,20")
     
     assert_equals(int8rgb_pixel_rows_to_hex([[14,15,16], [30,31,32]], auto_row_length=2), int8rgb_pixels_to_hex([[14,15,16], [30,31,32]]))
-
+    
+    assert_equals(int_lists_to_triplet_tuple_lists([[1,2,3,4,5,6],[7,8,9,10,11,12]]), [[(1,2,3),(4,5,6)],[(7,8,9),(10,11,12)]])
 
 test()
 
