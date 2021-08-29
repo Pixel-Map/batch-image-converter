@@ -14,7 +14,6 @@ import imageDataTools
 from imageDataTools import assert_equals
 
 
-
 def get_image_int8rgb_pixels(filename):
     try:
         image = Image.open(filename) #image is now of type PngImageFile, not Image.
@@ -30,42 +29,24 @@ def get_image_int8rgb_pixels(filename):
     return RGBPixels
 
 
-def save_int8rgb_tuples_as_half_hex(
-        data,
-        output_filename=None, mode=None,
-        decoration="{output_filename} = \"{result}\"",
-        **other_format_kwargs,
-    ):
-    """
-    data - an iterable of int8rgb tuples.
-    output_filename - may be set to None to disable creating or modifying files.
-    mode - file access mode - "w"=write, "a"=append.
-    decoration - string to format text inside the output file only (doesn't affect returned value).
-    **other_format_kwargs - keyword arguments to be passed to imageDataTools.int8rgb_pixels_to_hex.
-    """
-    
-    warnings.warn(
-        "save_int8rgb_tuples_as_half_hex is deprecated. Use\
-            imageDataTools.int8rgb_pixels_to_hex and/or\
-            save_text_to_file instead.",
-        DeprecationWarning            
-    )
-    
+def save_int8rgb_tuples_as_half_hex(data, output_filename=None, mode=None, decoration="{output_filename} = \"{result}\"", **other_kwargs):
+    #does not save when output_filename is None.
+    warnings.warn("save_int8rgb_tuples_as_half_hex is deprecated. Use imageDataTools.int8rgb_pixels_to_hex and/or save_text_to_file instead.")
     if decoration is None:
         decoration = "{result}"
-    if "{result}" not in decoration:
-        raise ValueError("invalid decoration string: must include \"{result}\" at least once.")
-        
     if output_filename is not None:
         if mode is None:
-            raise ValueError("mode cannot be None when writing a file.")
-            
-    result = imageDataTools.int8rgb_pixels_to_hex(data, chars_per_channel=1, **other_format_kwargs)
-    
-    if output_filename is not None:
-        decorated_result = decoration.replace("{output_filename}", output_filename).replace("{result}", result)
-        save_text_to_file(decorated_result, output_filename, mode)
-    return result
+            raise ValueError("mode not specified")
+    result = imageDataTools.int8rgb_pixels_to_hex(data, chars_per_channel=1, **other_kwargs)
+    if output_filename is None:
+        return result
+    else:
+        with open(output_filename, mode) as output_file:
+            #assert "{output_filename}" in decoration
+            assert "{result}" in decoration
+            decorated_result = decoration.replace("{output_filename}", output_filename).replace("{result}", result)
+            output_file.write(decorated_result)
+        return result
 
     
 def save_text_to_file(text, output_filename, mode):
@@ -114,16 +95,16 @@ def process_png_files(
     """
     folder_name - folder to search for input files, without trailing slash.
     file_name_pattern - bash-like, e.g. "*.png" or "*x*.png".
+    do_console_output - controls whether all processed files will be printed.
     do_file_output - controls whether any files will be created or modified.
-    do_console_output - ?
     common_output_filename - when not None, this option forces all file\
         outputs to be added to the same output file in append mode.
     output_filename_prefix, output_filename_suffix - prefix and suffix to be\
         added to the base name, which is either the name of the input image\
         file or the provided common output filename.
-    console_line_length - custom line wrapping length for console output, or
+    console_line_length - custom line wrapping length for console output, or\
         None for unmodified output.
-    file_line_length - custom line wrapping length for writing to files, or
+    file_line_length - custom line wrapping length for writing to files, or\
         None for unmodified output.
     """
         
